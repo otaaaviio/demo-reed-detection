@@ -26,7 +26,7 @@ window.onload = async () => {
         const dropdown = document.getElementById('image_dropdown');
         for (let i = 1; i <= 2; i++) {
             const option = document.createElement('option');
-            option.value = `../assets/example-imgs/image_${i}.jpg`;
+            option.value = `./assets/example-imgs/image_${i}.jpg`;
             option.text = `Imagem ${i}`;
             dropdown.add(option);
         }
