@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo: Detecção de palheta</title>
+    <style>
+        #loading {
+            display: none;
+            margin-top: 25px;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 0, 0, .3);
+            border-radius: 50%;
+            border-top-color: #000;
+            animation: spin 1s ease-in-out infinite;
+            -webkit-animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                -webkit-transform: rotate(360deg);
+            }
+        }
+
+        @-webkit-keyframes spin {
+            to {
+                -webkit-transform: rotate(360deg);
+            }
+        }
+
+        canvas {
+            display: block;
+            border: 1px solid black;
+            margin-top: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .row {
+            display: flex;
+            flex-direction: row;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .space-between {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        @media (max-width: 600px) {
+            .row {
+                flex-direction: column;
+            }
+        }
+
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: 'Arial', sans-serif;
+            color: #f0f0f0;
+            background: #2c3e50;
+            background: radial-gradient(circle, #2c3e50, #000000);
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Demo: Detecção de palheta</h1>
+    <div class="row">
+        <div class="column">
+            <div class="space-between">
+                <label for="fileInput">
+                    Selecione uma imagem local:
+                </label>
+                <input type="file" style="margin-left: 10px; max-width: 90px" id="fileInput" accept="image/*">
+            </div>
+            <div style="margin-top: 20px" class="space-between">
+                <label for="image_dropdown">
+                    Ou selecione uma imagem de exemplo:
+                </label>
+                <select id="image_dropdown">
+                    <option value="none">Selecione uma opção:</option>
+                </select>
+            </div>
+            <div class="container">
+                <div id="loading"></div>
+                <p id="loadingMessage"></p>
+            </div>
+            <div style="display: flex; align-items: center">
+                <p id="img-width" style="margin: 0 20px 0 0;"></p>
+                <p id="img-height"></p>
+            </div>
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+</div>
+<script async src="https://docs.opencv.org/4.x/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+<script src="script.js"></script>
+</body>
+</html>
