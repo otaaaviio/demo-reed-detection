@@ -1,0 +1,17 @@
+{
+  "name": "reed-detection",
+  "version": "0.0.1",
+  "description": "Simple reed detection",
+  "main": "src/script.js",
+  "scripts": {
+    "start": "live-server"
+  },
+  "dependencies": {
+    "live-server": "^1.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/otaaaviio/demo-reed-detection.git"
+  },
+  "private": true
+}

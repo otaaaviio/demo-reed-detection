@@ -1,15 +1,18 @@
 let canvas = document.getElementById('canvas');
-let context = canvas.getContext('2d');
+let context = canvas.getContext('2d', {willReadFrequently: true});
 let fileInput = document.getElementById('fileInput');
-let loading = document.getElementById("loading");
+let loading = document.getElementById("loading-spinner");
 const dropdown = document.getElementById('image_dropdown');
 const loadingMessage = document.getElementById("loadingMessage");
 const imgWidthText = document.getElementById("img-width");
 const imgHeightText = document.getElementById("img-height");
+const downloadButton = document.getElementById("download-button");
+let startCoord = {x: 0, y: 0};
+let finalCoord = {x: 0, y: 0};
 
 // Show loading spinner with message
 const handleLoading = (message, isLoading) => {
-    if(isLoading) {
+    if (isLoading) {
         imgWidthText.textContent = "";
         imgHeightText.textContent = "";
     }
@@ -18,7 +21,7 @@ const handleLoading = (message, isLoading) => {
     canvas.style.display = isLoading ? "none" : "block";
 }
 
-handleLoading("Carregando OpenCV", true);
+handleLoading("Loading OpenCV", true);
 
 // Load options from dropdown
 window.onload = async () => {
@@ -27,7 +30,7 @@ window.onload = async () => {
         for (let i = 1; i <= 2; i++) {
             const option = document.createElement('option');
             option.value = `./assets/example-imgs/image_${i}.jpg`;
-            option.text = `Imagem ${i}`;
+            option.text = `Image ${i}`;
             dropdown.add(option);
         }
     }
@@ -40,16 +43,17 @@ function onOpenCvReady() {
     handleLoading("", false);
 
     const processImg = (file) => {
-        handleLoading("Processando imagem...", true);
+        handleLoading("Processing image...", true);
         let reader = new FileReader();
         reader.onload = function (e) {
             let img = new Image();
             img.onload = function () {
-                imgWidthText.textContent = `Largura: ${img.width}px`;
-                imgHeightText.textContent = `Altura: ${img.height}px`;
+                imgWidthText.textContent = `Width: ${img.width}px`;
+                imgHeightText.textContent = `Height: ${img.height}px`;
 
                 detectRectangle(img);
                 handleLoading("", false);
+                downloadButton.style.display = "block";
             }
             img.src = e.target.result;
         }
@@ -58,19 +62,39 @@ function onOpenCvReady() {
 
     fileInput.addEventListener('change', (event) => {
         if (event.target.files.length > 0) {
+            downloadButton.style.display = "none";
             let file = event.target.files[0];
             processImg(file);
             dropdown.value = 'none';
         }
     });
 
-    dropdown.addEventListener("change", async (event) => {
+    dropdown.addEventListener('change', async (event) => {
         if (event.target.value !== 'none') {
+            downloadButton.style.display = "none";
             let res = await fetch(event.target.value);
             let file = await res.blob();
             processImg(file);
             fileInput.value = '';
         }
+    });
+
+    downloadButton.addEventListener('click', () => {
+        // Crop the image for the selected rectangle
+        const width = Math.abs(finalCoord.x - startCoord.x);
+        const height = Math.abs(finalCoord.y - startCoord.y);
+
+        const croppedCanvas = document.createElement('canvas');
+        croppedCanvas.width = width;
+        croppedCanvas.height = height;
+        const croppedContext = croppedCanvas.getContext('2d');
+        croppedContext.drawImage(canvas, startCoord.x, startCoord.y, width, height, 0, 0, width, height);
+
+        // Download the cropped image
+        const link = document.createElement('a');
+        link.download = 'cropped-image.jpg';
+        link.href = croppedCanvas.toDataURL('image/jpeg');
+        link.click();
     });
 }
 
@@ -113,13 +137,25 @@ function detectRectangle(img) {
 
     // Adjust canvas size to maintain aspect ratio
     let aspectRatio = img.width / img.height;
+    let newHeight = 480;
+    let newWidth = 480 * aspectRatio;
+
     if (img.width > img.height) {
         newWidth = 640;
         newHeight = 640 / aspectRatio;
-    } else {
-        newHeight = 480;
-        newWidth = 480 * aspectRatio;
     }
+
+    // Save the coordinates of the rectangle
+    const scaleX = newWidth / img.width;
+    const scaleY = newHeight / img.height;
+    startCoord = {
+        x: Math.round(rect.x * scaleX),
+        y: Math.round(rect.y * scaleY)
+    };
+    finalCoord = {
+        x: Math.round((rect.x + rect.width) * scaleX),
+        y: Math.round((rect.y + rect.height) * scaleY)
+    };
 
     // Resize the image
     let resizedImage = new cv.Mat();
