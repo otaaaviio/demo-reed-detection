@@ -1,12 +1,23 @@
-let canvas = document.getElementById('canvas');
-let context = canvas.getContext('2d', {willReadFrequently: true});
-let fileInput = document.getElementById('fileInput');
-let loading = document.getElementById("loading-spinner");
+const canvas = document.getElementById('canvas');
+const fileInput = document.getElementById('fileInput');
+const loading = document.getElementById("loading-spinner");
 const dropdown = document.getElementById('image_dropdown');
 const loadingMessage = document.getElementById("loadingMessage");
 const downloadButton = document.getElementById("download-button");
-let startCoord = {x: 0, y: 0};
-let finalCoord = {x: 0, y: 0};
+const resetButton = document.getElementById("reset-button");
+
+let context = canvas.getContext('2d', {willReadFrequently: true});
+let startCoord;
+let finalCoord ;
+let defaultStartCoord;
+let defaultFinalCoord;
+let image;
+let isDragging = false;
+let selectedCorner;
+
+const cornerSize = 10;
+
+// Setup initial page configuration
 
 // Show loading spinner with message
 const handleLoading = (message, isLoading) => {
@@ -32,6 +43,8 @@ window.onload = async () => {
     fillDropdown();
 }
 
+// Open CV functions
+
 // Function to be called when OpenCV.js is loaded
 function onOpenCvReady() {
     handleLoading("", false);
@@ -45,6 +58,7 @@ function onOpenCvReady() {
                 detectRectangle(img);
                 handleLoading("", false);
                 downloadButton.style.display = "block";
+                resetButton.style.display = "block";
             }
             img.src = e.target.result;
         }
@@ -54,6 +68,7 @@ function onOpenCvReady() {
     fileInput.addEventListener('change', (event) => {
         if (event.target.files.length > 0) {
             downloadButton.style.display = "none";
+            resetButton.style.display = "none";
             let file = event.target.files[0];
             processImg(file);
             dropdown.value = 'none';
@@ -63,6 +78,7 @@ function onOpenCvReady() {
     dropdown.addEventListener('change', async (event) => {
         if (event.target.value !== 'none') {
             downloadButton.style.display = "none";
+            resetButton.style.display = "none";
             let res = await fetch(event.target.value);
             let file = await res.blob();
             processImg(file);
@@ -71,6 +87,10 @@ function onOpenCvReady() {
     });
 
     downloadButton.addEventListener('click', () => {
+        // Remove the rectangle from the canvas
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        cv.imshow('canvas', image);
+
         // Crop the image for the selected rectangle
         const width = Math.abs(finalCoord.x - startCoord.x);
         const height = Math.abs(finalCoord.y - startCoord.y);
@@ -86,6 +106,15 @@ function onOpenCvReady() {
         link.download = 'cropped-image.jpg';
         link.href = croppedCanvas.toDataURL('image/jpeg');
         link.click();
+
+        // Return the rectangle
+        drawRect();
+    });
+
+    resetButton.addEventListener('click', () => {
+        startCoord = {...defaultStartCoord};
+        finalCoord = {...defaultFinalCoord};
+        drawRect();
     });
 }
 
@@ -122,10 +151,6 @@ function detectRectangle(img) {
     // Get the bouding rectangle
     let rect = cv.boundingRect(mat);
 
-    // Draw rectangle on the image
-    let color = new cv.Scalar(255, 0, 0, 255);
-    cv.rectangle(src, new cv.Point(rect.x, rect.y), new cv.Point(rect.x + rect.width, rect.y + rect.height), color, 3);
-
     // Adjust canvas size to maintain aspect ratio
     let aspectRatio = img.width / img.height;
     let newHeight = 480;
@@ -136,7 +161,24 @@ function detectRectangle(img) {
         newHeight = 640 / aspectRatio;
     }
 
-    // Save the coordinates of the rectangle
+    // Resize the canvas
+    canvas.width = newWidth;
+    canvas.height = newHeight;
+
+    // Resize the image
+    image = new cv.Mat();
+    let dsize = new cv.Size(newWidth, newHeight);
+    cv.resize(src, image, dsize, 0, 0, cv.INTER_AREA);
+
+    // Show the result on the canvas
+    cv.imshow('canvas', image);
+
+    // Cleanup
+    src.delete();
+    mat.delete();
+    // image.delete(); removed to keep the image on the canvas
+
+    // Set the coordinates of the bounding rectangle
     const scaleX = newWidth / img.width;
     const scaleY = newHeight / img.height;
     startCoord = {
@@ -148,16 +190,73 @@ function detectRectangle(img) {
         y: Math.round((rect.y + rect.height) * scaleY)
     };
 
-    // Resize the image
-    let resizedImage = new cv.Mat();
-    let dsize = new cv.Size(newWidth, newHeight);
-    cv.resize(src, resizedImage, dsize, 0, 0, cv.INTER_AREA);
+    // save the default coordinates to reset the rectangle
+    defaultStartCoord = {...startCoord};
+    defaultFinalCoord = {...finalCoord};
 
-    // Show the result on the canvas
-    cv.imshow('canvas', resizedImage);
-
-    // Cleanup
-    src.delete();
-    mat.delete();
-    resizedImage.delete();
+    // Draw red rectangle on the image
+    drawRect();
 }
+
+// Tools to resize and move the bounding rectangle
+
+const getMouseCoords = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const mouseX = (e.clientX - rect.left) * scaleX;
+    const mouseY = (e.clientY - rect.top) * scaleY;
+    return { mouseX, mouseY };
+}
+
+function getCorner(mouseX, mouseY) {
+    if (Math.abs(mouseX - startCoord.x) < cornerSize && Math.abs(mouseY - startCoord.y) < cornerSize) {
+        return 'start';
+    } else if (Math.abs(mouseX - finalCoord.x) < cornerSize && Math.abs(mouseY - finalCoord.y) < cornerSize) {
+        return 'end';
+    }
+    return null;
+}
+
+function drawRect() {
+    // Clear the canvas
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    cv.imshow('canvas', image);
+
+    // Draw the rectangle
+    context.strokeStyle = 'red';
+    context.lineWidth = 2;
+    context.strokeRect(startCoord.x, startCoord.y, finalCoord.x - startCoord.x, finalCoord.y - startCoord.y);
+
+    // Draw the corners
+    context.fillStyle = 'blue';
+    context.fillRect(startCoord.x - cornerSize / 2, startCoord.y - cornerSize / 2, cornerSize, cornerSize); // Left top corner
+    context.fillRect(finalCoord.x - cornerSize / 2, finalCoord.y - cornerSize / 2, cornerSize, cornerSize); // Right bottom corner
+}
+
+const handleCanvasEvent = (e, type) => {
+    const { mouseX, mouseY } = getMouseCoords(e);
+
+    if (type === 'mousedown') {
+        selectedCorner = getCorner(mouseX, mouseY);
+        if (selectedCorner) isDragging = true;
+    } else if (type === 'mouseup' || type === 'mouseleave') {
+        isDragging = false;
+        selectedCorner = null;
+    } else if (type === 'mousemove' && isDragging && selectedCorner) {
+        if (selectedCorner === 'start') {
+            startCoord.x = mouseX;
+            startCoord.y = mouseY;
+        } else if (selectedCorner === 'end') {
+            finalCoord.x = mouseX;
+            finalCoord.y = mouseY;
+        }
+        drawRect();
+    }
+}
+
+// Event listeners for the canvas
+canvas.addEventListener('mousedown', (e) => handleCanvasEvent(e, 'mousedown'));
+canvas.addEventListener('mouseup', (e) => handleCanvasEvent(e, 'mouseup'));
+canvas.addEventListener('mouseleave', (e) => handleCanvasEvent(e, 'mouseleave'));
+canvas.addEventListener('mousemove', (e) => handleCanvasEvent(e, 'mousemove'));

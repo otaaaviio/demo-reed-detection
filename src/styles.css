@@ -61,9 +61,9 @@ canvas {
     align-items: center;
 }
 
-.download-container {
+.btn-container {
     display: flex;
-    justify-content: end;
+    justify-content: space-between;
 }
 
 @media (max-width: 600px) {

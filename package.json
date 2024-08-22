@@ -2,7 +2,7 @@
   "name": "reed-detection",
   "version": "0.0.1",
   "description": "Simple reed detection",
-  "main": "src/script.js",
+  "main": "src/app.js",
   "scripts": {
     "start": "live-server"
   },
