@@ -4,18 +4,12 @@ let fileInput = document.getElementById('fileInput');
 let loading = document.getElementById("loading-spinner");
 const dropdown = document.getElementById('image_dropdown');
 const loadingMessage = document.getElementById("loadingMessage");
-const imgWidthText = document.getElementById("img-width");
-const imgHeightText = document.getElementById("img-height");
 const downloadButton = document.getElementById("download-button");
 let startCoord = {x: 0, y: 0};
 let finalCoord = {x: 0, y: 0};
 
 // Show loading spinner with message
 const handleLoading = (message, isLoading) => {
-    if (isLoading) {
-        imgWidthText.textContent = "";
-        imgHeightText.textContent = "";
-    }
     loadingMessage.textContent = message;
     loading.style.display = isLoading ? "block" : "none";
     canvas.style.display = isLoading ? "none" : "block";
@@ -48,9 +42,6 @@ function onOpenCvReady() {
         reader.onload = function (e) {
             let img = new Image();
             img.onload = function () {
-                imgWidthText.textContent = `Width: ${img.width}px`;
-                imgHeightText.textContent = `Height: ${img.height}px`;
-
                 detectRectangle(img);
                 handleLoading("", false);
                 downloadButton.style.display = "block";

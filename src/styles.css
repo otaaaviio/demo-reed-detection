@@ -61,6 +61,11 @@ canvas {
     align-items: center;
 }
 
+.download-container {
+    display: flex;
+    justify-content: end;
+}
+
 @media (max-width: 600px) {
     .row {
         flex-direction: column;
