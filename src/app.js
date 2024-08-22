@@ -235,15 +235,29 @@ function drawRect() {
 }
 
 const handleCanvasEvent = (e, type) => {
-    const { mouseX, mouseY } = getMouseCoords(e);
+    e.preventDefault(); // Prevent default behavior for touch events
 
-    if (type === 'mousedown') {
+    let mouseX, mouseY;
+    if (e.touches) {
+        // Touch event
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        mouseX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+        mouseY = (touch.clientY - rect.top) * (canvas.height / rect.height);
+    } else {
+        // Mouse event
+        const { mouseX: x, mouseY: y } = getMouseCoords(e);
+        mouseX = x;
+        mouseY = y;
+    }
+
+    if (type === 'mousedown' || type === 'touchstart') {
         selectedCorner = getCorner(mouseX, mouseY);
         if (selectedCorner) isDragging = true;
-    } else if (type === 'mouseup' || type === 'mouseleave') {
+    } else if (type === 'mouseup' || type === 'mouseleave' || type === 'touchend' || type === 'touchcancel') {
         isDragging = false;
         selectedCorner = null;
-    } else if (type === 'mousemove' && isDragging && selectedCorner) {
+    } else if ((type === 'mousemove' || type === 'touchmove') && isDragging && selectedCorner) {
         if (selectedCorner === 'start') {
             startCoord.x = mouseX;
             startCoord.y = mouseY;
@@ -260,3 +274,9 @@ canvas.addEventListener('mousedown', (e) => handleCanvasEvent(e, 'mousedown'));
 canvas.addEventListener('mouseup', (e) => handleCanvasEvent(e, 'mouseup'));
 canvas.addEventListener('mouseleave', (e) => handleCanvasEvent(e, 'mouseleave'));
 canvas.addEventListener('mousemove', (e) => handleCanvasEvent(e, 'mousemove'));
+
+// Event listeners for touch events
+canvas.addEventListener('touchstart', (e) => handleCanvasEvent(e, 'touchstart'));
+canvas.addEventListener('touchend', (e) => handleCanvasEvent(e, 'touchend'));
+canvas.addEventListener('touchcancel', (e) => handleCanvasEvent(e, 'touchcancel'));
+canvas.addEventListener('touchmove', (e) => handleCanvasEvent(e, 'touchmove'));
