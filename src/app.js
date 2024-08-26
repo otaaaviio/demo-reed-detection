@@ -8,10 +8,11 @@ const resetButton = document.getElementById("reset-button");
 
 let context = canvas.getContext('2d', {willReadFrequently: true});
 let startCoord;
-let finalCoord ;
+let finalCoord;
 let defaultStartCoord;
 let defaultFinalCoord;
 let image;
+let originalImage;
 let isDragging = false;
 let selectedCorner;
 
@@ -53,14 +54,14 @@ function onOpenCvReady() {
         handleLoading("Processing image...", true);
         let reader = new FileReader();
         reader.onload = function (e) {
-            let img = new Image();
-            img.onload = function () {
-                detectRectangle(img);
+            originalImage = new Image();
+            originalImage.onload = function () {
+                detectRectangle(originalImage);
                 handleLoading("", false);
                 downloadButton.style.display = "block";
                 resetButton.style.display = "block";
             }
-            img.src = e.target.result;
+            originalImage.src = e.target.result;
         }
         reader.readAsDataURL(file);
     }
@@ -87,28 +88,44 @@ function onOpenCvReady() {
     });
 
     downloadButton.addEventListener('click', () => {
-        // Remove the rectangle from the canvas
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        cv.imshow('canvas', image);
-
-        // Crop the image for the selected rectangle
+        // Calculate the width and height of the selected area
         const width = Math.abs(finalCoord.x - startCoord.x);
         const height = Math.abs(finalCoord.y - startCoord.y);
 
+        // Calculate the scale factors
+        const scaleX = originalImage.width / canvas.width;
+        const scaleY = originalImage.height / canvas.height;
+
+        // Adjust the coordinates based on the scale factors
+        const adjustedStartX = startCoord.x * scaleX;
+        const adjustedStartY = startCoord.y * scaleY;
+        const adjustedWidth = width * scaleX;
+        const adjustedHeight = height * scaleY;
+
+        // Create a canvas to hold the cropped image
         const croppedCanvas = document.createElement('canvas');
-        croppedCanvas.width = width;
-        croppedCanvas.height = height;
+        croppedCanvas.width = adjustedWidth;
+        croppedCanvas.height = adjustedHeight;
         const croppedContext = croppedCanvas.getContext('2d');
-        croppedContext.drawImage(canvas, startCoord.x, startCoord.y, width, height, 0, 0, width, height);
+
+        // Draw the selected area onto the cropped canvas
+        croppedContext.drawImage(
+            originalImage,
+            adjustedStartX,
+            adjustedStartY,
+            adjustedWidth,
+            adjustedHeight,
+            0,
+            0,
+            adjustedWidth,
+            adjustedHeight
+        );
 
         // Download the cropped image
         const link = document.createElement('a');
         link.download = 'cropped-image.jpg';
         link.href = croppedCanvas.toDataURL('image/jpeg');
         link.click();
-
-        // Return the rectangle
-        drawRect();
     });
 
     resetButton.addEventListener('click', () => {
@@ -206,7 +223,7 @@ const getMouseCoords = (e) => {
     const scaleY = canvas.height / rect.height;
     const mouseX = (e.clientX - rect.left) * scaleX;
     const mouseY = (e.clientY - rect.top) * scaleY;
-    return { mouseX, mouseY };
+    return {mouseX, mouseY};
 }
 
 function getCorner(mouseX, mouseY) {
@@ -246,7 +263,7 @@ const handleCanvasEvent = (e, type) => {
         mouseY = (touch.clientY - rect.top) * (canvas.height / rect.height);
     } else {
         // Mouse event
-        const { mouseX: x, mouseY: y } = getMouseCoords(e);
+        const {mouseX: x, mouseY: y} = getMouseCoords(e);
         mouseX = x;
         mouseY = y;
     }
